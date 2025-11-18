@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Clock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color:#eee; background:#071018; }
+    h1 { margin-bottom: 1rem; }
+    h2 { margin: 0.5rem 0 0.2rem; color:#00aaff; }
+    .clock { font-size: 2rem; font-weight: bold; }
+    textarea { width:100%; height:120px; margin-top:1rem; font-family:monospace; }
+    button { margin-top:0.5rem; padding:6px 12px; border-radius:6px; cursor:pointer; }
+    .hubBtn { background:linear-gradient(180deg,#46d37a,#2fa85a); color:#012a12; font-weight:700; }
+    footer { margin-top:2rem; font-size:14px; color:#7fbfdc; text-align:center; }
+  </style>
+</head>
+<body>
+  <h1>Clock</h1>
+
+  <h2>Current</h2>
+  <div class="clock" id="current">--:--:--</div>
+
+  <h2>Left</h2>
+  <div class="clock" id="left">--:--:--</div>
+
+  <h2>End</h2>
+  <div class="clock" id="end">--:--:--</div>
+
+  <p>Enter schedule lines (<code>start/end</code> times like <code>8:00/8:58</code>, one per line):</p>
+  <textarea id="scheduleBox">08:00/08:58
+09:02/09:44
+09:48/10:30
+10:34/11:16
+11:20/12:23
+12:27/13:25
+13:29/14:27
+14:31/15:30</textarea><br/>
+  <button onclick="applySchedule()">Apply Schedule</button>
+
+  <p>
+    <button class="hubBtn" onclick="window.open('https://nathanm32712.github.io/html-hub/','_blank')">
+      Open Game Hub
+    </button>
+  </p>
+
+  <footer>
+    <p>Made by Nathan Marty</p>
+  </footer>
+
+<script>
+let periods = [];
+
+function toSeconds(t){
+  const [h,m] = t.split(":").map(Number);
+  return h*3600 + m*60;
+}
+
+function formatClock(h,m,s){
+  let hrs = h;
+  let ampm = hrs >= 12 ? "PM" : "AM";
+  hrs = hrs % 12; if (hrs===0) hrs=12;
+  // no leading zero for hours
+  return `${hrs}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")} ${ampm}`;
+}
+
+function formatDuration(sec){
+  const hrs = String(Math.floor(sec/3600)).padStart(2,"0");
+  const mins = String(Math.floor((sec%3600)/60)).padStart(2,"0");
+  const secs = String(sec%60).padStart(2,"0");
+  return `${hrs}:${mins}:${secs}`;
+}
+
+function applySchedule(){
+  const lines = document.getElementById("scheduleBox").value.trim().split(/\n+/);
+  periods = [];
+  for(const line of lines){
+    const parts = line.split("/");
+    if(parts.length===2){
+      try{
+        const start = toSeconds(parts[0].trim());
+        const end = toSeconds(parts[1].trim());
+        periods.push([start,end]);
+      }catch(e){}
+    }
+  }
+}
+
+function updateClock(){
+  const now = new Date();
+  const currentSec = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+  const current = formatClock(now.getHours(), now.getMinutes(), now.getSeconds());
+
+  let left="--:--:--", end="--:--:--";
+
+  if(periods.length>0){
+    for(const [start,endSec] of periods){
+      if(currentSec>=start && currentSec<=endSec){
+        left = formatDuration(endSec-currentSec);
+        const endDate = new Date(now);
+        endDate.setHours(Math.floor(endSec/3600), Math.floor((endSec%3600)/60), endSec%60);
+        end = formatClock(endDate.getHours(), endDate.getMinutes(), endDate.getSeconds());
+        break;
+      }
+    }
+  }
+
+  // Tab title shows only time left and current time with "/"
+  document.title = `${left}/${current}`;
+
+  document.getElementById("current").textContent = current;
+  document.getElementById("left").textContent = left;
+  document.getElementById("end").textContent = end;
+}
+
+// load defaults immediately
+applySchedule();
+setInterval(updateClock,1000);
+updateClock();
+</script>
+</body>
+</html>
